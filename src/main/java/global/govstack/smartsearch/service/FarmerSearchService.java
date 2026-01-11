@@ -26,10 +26,18 @@ import java.util.*;
 public class FarmerSearchService {
 
     private static final String CLASS_NAME = FarmerSearchService.class.getName();
-    
-    // Limits
+
+    // Search result limits
     private static final int MAX_DB_RESULTS = 50;     // Fetch extra for app-level filtering
     private static final int MAX_RETURN_RESULTS = 20; // Return to client
+
+    // Autocomplete result limits (Issue #19)
+    private static final int MAX_AUTOCOMPLETE_RESULTS = 50;      // Villages, cooperatives
+    private static final int MAX_CC_AUTOCOMPLETE_RESULTS = 100;  // Community councils (larger list)
+
+    // Scoring constants (Issues #22, #23)
+    private static final int EXACT_MATCH_SCORE = 100;  // Exact national ID or phone match
+    private static final int BASE_FUZZY_SCORE = 50;    // Base score for fuzzy/criteria matches
     
     // View name (replaces separate index table for zero-latency search)
     private static final String INDEX_TABLE = "v_farmer_search";
@@ -309,7 +317,7 @@ public class FarmerSearchService {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         FarmerResult farmer = mapResultSetToFarmer(rs);
-                        farmer.setRelevanceScore(100); // Exact match = 100%
+                        farmer.setRelevanceScore(EXACT_MATCH_SCORE); // Exact match = 100%
                         result.getFarmers().add(farmer);
                     }
                 }
@@ -355,7 +363,7 @@ public class FarmerSearchService {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         FarmerResult farmer = mapResultSetToFarmer(rs);
-                        farmer.setRelevanceScore(100); // Exact match = 100%
+                        farmer.setRelevanceScore(EXACT_MATCH_SCORE); // Exact match = 100%
                         result.getFarmers().add(farmer);
                     }
                 }
@@ -525,8 +533,8 @@ public class FarmerSearchService {
      * Calculate relevance score for a single farmer result
      */
     private int calculateRelevanceScore(FarmerResult farmer, SearchCriteria criteria) {
-        // Name matching score
-        int nameScore = 50; // Base score
+        // Name matching score (Issue #22)
+        int nameScore = BASE_FUZZY_SCORE;
         
         if (isNotEmpty(criteria.getName())) {
             nameScore = fuzzyService.calculateNameRelevanceScore(
@@ -573,7 +581,7 @@ public class FarmerSearchService {
             params.add(query.trim() + "%");
         }
         
-        sql.append(" GROUP BY c_village ORDER BY farmer_count DESC LIMIT 50");
+        sql.append(" GROUP BY c_village ORDER BY farmer_count DESC LIMIT " + MAX_AUTOCOMPLETE_RESULTS);
         
         try {
             DataSource ds = getDataSource();
@@ -617,7 +625,7 @@ public class FarmerSearchService {
             params.add(districtCode.trim());
         }
         
-        sql.append(" GROUP BY c_community_council ORDER BY c_community_council ASC LIMIT 100");
+        sql.append(" GROUP BY c_community_council ORDER BY c_community_council ASC LIMIT " + MAX_CC_AUTOCOMPLETE_RESULTS);
         
         try {
             DataSource ds = getDataSource();
@@ -666,7 +674,7 @@ public class FarmerSearchService {
             params.add("%" + query.trim() + "%");
         }
         
-        sql.append(" GROUP BY c_cooperative_name ORDER BY farmer_count DESC LIMIT 50");
+        sql.append(" GROUP BY c_cooperative_name ORDER BY farmer_count DESC LIMIT " + MAX_AUTOCOMPLETE_RESULTS);
         
         try {
             DataSource ds = getDataSource();
@@ -713,7 +721,7 @@ public class FarmerSearchService {
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         FarmerResult farmer = mapResultSetToFarmer(rs);
-                        farmer.setRelevanceScore(100);
+                        farmer.setRelevanceScore(EXACT_MATCH_SCORE);
                         return farmer;
                     }
                 }

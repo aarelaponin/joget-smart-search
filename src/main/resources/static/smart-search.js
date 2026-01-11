@@ -33,7 +33,7 @@
     'use strict';
 
     // Version for debugging
-    var VERSION = '8.1-SNAPSHOT-phase9';
+    var VERSION = '8.1-SNAPSHOT-phase10';
 
     // Phase 7: Error codes and messages
     var ERROR_CODES = {
@@ -118,7 +118,10 @@
 
     console.log('[FarmerSmartSearch] Loading v' + VERSION);
 
-    // Districts for Lesotho (static list)
+    // TODO Issue #20: Districts are currently hardcoded for Lesotho.
+    // Future enhancement: Load districts dynamically via API endpoint (e.g., /jw/api/fss/fss/districts)
+    // to make the plugin reusable for other countries. The API endpoint should query distinct
+    // district values from the v_farmer_search view or a separate configuration table.
     var DISTRICTS = [
         { code: 'BER', name: 'Berea' },
         { code: 'BB', name: 'Butha-Buthe' },
@@ -1945,9 +1948,11 @@
             html += '<input type="text" class="fss-criteria-input" placeholder="Type to search..."';
             html += ' data-criteria-id="' + criteria.id + '" autocomplete="off">';
         } else {
-            html += '<input type="text" class="fss-criteria-input" placeholder="Enter at least 4 digits..."';
+            // Issue #18: Use dynamic minLength from criteria type config
+            var minLen = criteriaType.minLength || 4;
+            html += '<input type="text" class="fss-criteria-input" placeholder="Enter at least ' + minLen + ' digits..."';
             html += ' data-criteria-id="' + criteria.id + '" pattern="' + (criteriaType.pattern || '') + '">';
-            html += '<div class="fss-partial-input-hint">Minimum 4 digits required</div>';
+            html += '<div class="fss-partial-input-hint">Minimum ' + minLen + ' digits required</div>';
         }
         
         html += '</div>';

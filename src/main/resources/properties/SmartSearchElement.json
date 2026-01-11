@@ -173,24 +173,5 @@
                 "value": "true"
             }
         ]
-    },
-    {
-        "title": "Search Filters (Advanced)",
-        "properties": [
-            {
-                "name": "filterDistrict",
-                "label": "District Filter Field",
-                "description": "Form field ID to use as district filter (optional - for cascading filters). Leave empty to show all districts.",
-                "type": "textfield",
-                "value": ""
-            },
-            {
-                "name": "filterVillage",
-                "label": "Village Filter Field",
-                "description": "Form field ID to use as village filter (optional). Requires district filter to be set.",
-                "type": "textfield",
-                "value": ""
-            }
-        ]
     }
 ]
