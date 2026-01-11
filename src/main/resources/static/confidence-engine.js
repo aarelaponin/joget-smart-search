@@ -425,16 +425,16 @@
             expectedResults *= Math.min(1.0, nameMultiplier);
         }
 
-        // Apply partial ID factor
-        if (criteria.partialId && criteria.partialId.length >= 4) {
+        // Apply partial ID factor (Issue #6: uses config nationalIdMinLength)
+        if (criteria.partialId && criteria.partialId.length >= this.nationalIdMinLength) {
             var idFactor = factors.partial_id_4 || 0.92;
             expectedResults *= (1 - idFactor);
         }
 
-        // Apply partial phone factor
+        // Apply partial phone factor (Issue #6: uses config phoneMinLength)
         if (criteria.partialPhone) {
             var phonePartDigits = criteria.partialPhone.replace(/[^\d]/g, '');
-            if (phonePartDigits.length >= 4) {
+            if (phonePartDigits.length >= this.phoneMinLength) {
                 var phoneFactor = factors.partial_phone_4 || 0.90;
                 expectedResults *= (1 - phoneFactor);
             }
@@ -510,12 +510,12 @@
             }
         }
 
-        // Check what criteria we have
+        // Check what criteria we have (Issue #6: uses config min lengths)
         var hasName = !!(criteria.name && criteria.name.trim() && criteria.name.trim().length >= 2);
         var hasDistrict = !!(criteria.districtCode && criteria.districtCode.trim());
         var hasVillage = !!(criteria.village && criteria.village.trim());
-        var hasPartialId = !!(criteria.partialId && criteria.partialId.length >= 4);
-        var hasPartialPhone = !!(criteria.partialPhone && criteria.partialPhone.replace(/[^\d]/g, '').length >= 4);
+        var hasPartialId = !!(criteria.partialId && criteria.partialId.length >= this.nationalIdMinLength);
+        var hasPartialPhone = !!(criteria.partialPhone && criteria.partialPhone.replace(/[^\d]/g, '').length >= this.phoneMinLength);
         var hasCommunityCouncil = !!(criteria.communityCouncil && criteria.communityCouncil.trim());
         var hasCooperative = !!(criteria.cooperative && criteria.cooperative.trim());
 

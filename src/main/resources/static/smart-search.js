@@ -33,7 +33,7 @@
     'use strict';
 
     // Version for debugging
-    var VERSION = '8.1-SNAPSHOT-phase7-v1';
+    var VERSION = '8.1-SNAPSHOT-phase8';
 
     // Phase 7: Error codes and messages
     var ERROR_CODES = {
@@ -86,6 +86,17 @@
         maxDelay: 10000   // 10 seconds
     };
 
+    // Phase 8: Score display thresholds (Issue #7)
+    var SCORE_THRESHOLDS = {
+        high: 90,
+        medium: 70,
+        low: 50
+    };
+
+    // Phase 8: Search limits (Issues #8, #9)
+    var SEARCH_RESULT_LIMIT = 20;
+    var MAX_RESULTS_WARNING = 100;
+
     console.log('[FarmerSmartSearch] Loading v' + VERSION);
 
     // Districts for Lesotho (static list)
@@ -102,14 +113,23 @@
         { code: 'TT', name: 'Thaba-Tseka' }
     ];
 
-    // Criteria types for the builder (Phase 5)
-    var CRITERIA_TYPES = [
-        { type: 'village', label: 'Village', icon: 'fa-map-marker-alt', requiresDistrict: true, inputType: 'autocomplete' },
-        { type: 'community_council', label: 'Community Council', icon: 'fa-building', requiresDistrict: false, inputType: 'autocomplete' },
-        { type: 'cooperative', label: 'Cooperative', icon: 'fa-users', requiresDistrict: false, inputType: 'autocomplete' },
-        { type: 'partial_id', label: 'Partial ID (4+ digits)', icon: 'fa-id-card', requiresDistrict: false, inputType: 'text', minLength: 4, pattern: '[0-9]+' },
-        { type: 'partial_phone', label: 'Partial Phone (4+ digits)', icon: 'fa-phone', requiresDistrict: false, inputType: 'text', minLength: 4, pattern: '[0-9]+' }
-    ];
+    /**
+     * Get criteria types with config-aware minLength values (Issue #5)
+     * @param {Object} config - The search config object
+     * @returns {Array} Criteria type definitions
+     */
+    function getCriteriaTypes(config) {
+        var idMinLen = (config && config.nationalIdMinLength) || 4;
+        var phoneMinLen = (config && config.phoneMinLength) || 8;
+
+        return [
+            { type: 'village', label: 'Village', icon: 'fa-map-marker-alt', requiresDistrict: true, inputType: 'autocomplete' },
+            { type: 'community_council', label: 'Community Council', icon: 'fa-building', requiresDistrict: false, inputType: 'autocomplete' },
+            { type: 'cooperative', label: 'Cooperative', icon: 'fa-users', requiresDistrict: false, inputType: 'autocomplete' },
+            { type: 'partial_id', label: 'Partial ID (' + idMinLen + '+ digits)', icon: 'fa-id-card', requiresDistrict: false, inputType: 'text', minLength: idMinLen, pattern: '[0-9]+' },
+            { type: 'partial_phone', label: 'Partial Phone (' + phoneMinLen + '+ digits)', icon: 'fa-phone', requiresDistrict: false, inputType: 'text', minLength: phoneMinLen, pattern: '[0-9]+' }
+        ];
+    }
 
     /**
      * FarmerSmartSearch - Main class for farmer search functionality
@@ -194,7 +214,10 @@
         this.id = id;
         this.container = container;
         this.config = config;
-        
+
+        // Phase 8: Initialize config-aware criteria types (Issue #5)
+        this.criteriaTypes = getCriteriaTypes(config);
+
         // State
         this.state = {
             isOpen: config.displayMode === 'inline',
@@ -1790,8 +1813,8 @@
         
         // Build menu items
         var html = '';
-        for (var i = 0; i < CRITERIA_TYPES.length; i++) {
-            var ct = CRITERIA_TYPES[i];
+        for (var i = 0; i < this.criteriaTypes.length; i++) {
+            var ct = this.criteriaTypes[i];
             
             // Check if already added (only allow one of each type)
             var alreadyAdded = this.state.additionalCriteria.some(function(c) { 
@@ -1850,7 +1873,7 @@
      */
     SearchInstance.prototype.addCriteria = function(type) {
         var self = this;
-        var criteriaType = CRITERIA_TYPES.find(function(ct) { return ct.type === type; });
+        var criteriaType = this.criteriaTypes.find(function(ct) { return ct.type === type; });
         
         if (!criteriaType) {
             console.error('[FarmerSmartSearch] Unknown criteria type:', type);
@@ -2054,9 +2077,9 @@
             criteria.value = digitsOnly;
         }
         
-        // Validate minimum length
-        var criteriaType = CRITERIA_TYPES.find(function(ct) { return ct.type === type; });
-        var minLength = criteriaType ? criteriaType.minLength : 4;
+        // Validate minimum length (uses config-aware criteriaTypes)
+        var criteriaType = this.criteriaTypes.find(function(ct) { return ct.type === type; });
+        var minLength = criteriaType ? criteriaType.minLength : (this.config.nationalIdMinLength || 4);
         
         if (row) {
             var input = row.querySelector('.fss-criteria-input');
@@ -2639,10 +2662,10 @@
 
         console.log('[FarmerSmartSearch] executeSearch() - criteria:', criteria, 'inputType:', inputType);
 
-        // Build request data
+        // Build request data (Issue #9: uses SEARCH_RESULT_LIMIT constant)
         var requestData = {
             criteria: criteria,
-            limit: 20
+            limit: SEARCH_RESULT_LIMIT
         };
 
         // Phase 7: Store request for retry
@@ -2665,8 +2688,8 @@
                 
                 self.state.results = response.farmers || [];
                 
-                // Check for too many results
-                if (response.totalCount > 100) {
+                // Check for too many results (Issue #8: uses MAX_RESULTS_WARNING constant)
+                if (response.totalCount > MAX_RESULTS_WARNING) {
                     self.handleError('ERR_TOO_MANY', 'Too many results: ' + response.totalCount, { count: response.totalCount });
                     return;
                 }
@@ -2971,12 +2994,12 @@
     };
 
     /**
-     * Get CSS class for score
+     * Get CSS class for score (Issue #7: uses SCORE_THRESHOLDS constant)
      */
     SearchInstance.prototype.getScoreClass = function(score) {
-        if (score >= 90) return 'fss-score-high';
-        if (score >= 70) return 'fss-score-medium';
-        if (score >= 50) return 'fss-score-low';
+        if (score >= SCORE_THRESHOLDS.high) return 'fss-score-high';
+        if (score >= SCORE_THRESHOLDS.medium) return 'fss-score-medium';
+        if (score >= SCORE_THRESHOLDS.low) return 'fss-score-low';
         return 'fss-score-verylow';
     };
 
