@@ -33,7 +33,7 @@
     'use strict';
 
     // Version for debugging
-    var VERSION = '8.1-SNAPSHOT-phase8';
+    var VERSION = '8.1-SNAPSHOT-phase9';
 
     // Phase 7: Error codes and messages
     var ERROR_CODES = {
@@ -96,6 +96,25 @@
     // Phase 8: Search limits (Issues #8, #9)
     var SEARCH_RESULT_LIMIT = 20;
     var MAX_RESULTS_WARNING = 100;
+
+    // ==========================================================================
+    // Phase 9: FSS_DEFAULTS - Consolidated default values (Phase 3 fixes)
+    // ==========================================================================
+    var FSS_DEFAULTS = {
+        // Timing (Issue #13, #15, #16)
+        apiTimeout: 30000,           // 30 seconds for main API calls
+        statisticsTimeout: 10000,    // 10 seconds for statistics API
+        errorAutoHideDelay: 3000,    // 3 seconds for inline error auto-hide
+        inlineLookupDebounce: 500,   // 500ms debounce for inline lookup
+        autocompleteDebounce: 300,   // 300ms debounce for autocomplete
+
+        // Length requirements (Issue #11, #12)
+        autocompleteMinChars: 2,     // Minimum chars to trigger autocomplete
+        nameMinLength: 2,            // Minimum chars for name search
+
+        // Display limits (Issue #17)
+        autocompleteMaxItems: 10     // Max items in autocomplete dropdown
+    };
 
     console.log('[FarmerSmartSearch] Loading v' + VERSION);
 
@@ -1137,7 +1156,9 @@
         // Create confidence engine with configurable parameters
         this.confidenceEngine = new ConfidenceEngine({
             nationalIdMinLength: this.config.nationalIdMinLength || 4,
-            phoneMinLength: this.config.phoneMinLength || 8
+            phoneMinLength: this.config.phoneMinLength || 8,
+            nameMinLength: FSS_DEFAULTS.nameMinLength,
+            statisticsTimeout: FSS_DEFAULTS.statisticsTimeout
         });
 
         // Load statistics (with cache support)
@@ -1599,7 +1620,7 @@
             if (digitsOnly.length >= minLength) {
                 this.inlineLookupTimer = setTimeout(function() {
                     self.executeInlineLookup(value, inputType);
-                }, 500);
+                }, FSS_DEFAULTS.inlineLookupDebounce);
             }
         }
     };
@@ -1753,11 +1774,11 @@
             }
             this.inlineError.style.display = 'flex';
             
-            // Auto-hide after 3 seconds
+            // Auto-hide after configured delay
             var self = this;
             setTimeout(function() {
                 self.clearInlineError();
-            }, 3000);
+            }, FSS_DEFAULTS.errorAutoHideDelay);
         }
     };
 
@@ -1956,7 +1977,7 @@
             
             input.addEventListener('focus', function(e) {
                 // If there's a value, trigger autocomplete
-                if (e.target.value.length >= 2) {
+                if (e.target.value.length >= FSS_DEFAULTS.autocompleteMinChars) {
                     self.handleAutocompleteInput(criteria.id, criteria.type, e.target.value);
                 }
             });
@@ -2045,14 +2066,14 @@
         }
         
         // Minimum characters for autocomplete
-        if (value.length < 2) {
+        if (value.length < FSS_DEFAULTS.autocompleteMinChars) {
             this.closeAutocomplete();
             return;
         }
-        
+
         this.autocompleteTimer = setTimeout(function() {
             self.fetchAutocompleteOptions(criteriaId, type, value);
-        }, 300);
+        }, FSS_DEFAULTS.autocompleteDebounce);
     };
 
     /**
@@ -2203,7 +2224,7 @@
         } else if (options.length === 0) {
             html = '<div class="fss-autocomplete-empty">No results found</div>';
         } else {
-            for (var i = 0; i < Math.min(options.length, 10); i++) {
+            for (var i = 0; i < Math.min(options.length, FSS_DEFAULTS.autocompleteMaxItems); i++) {
                 var opt = options[i];
                 html += '<div class="fss-autocomplete-item' + (i === this.state.autocompleteActiveIndex ? ' fss-active' : '') + '" data-index="' + i + '">';
                 html += '  <span class="fss-autocomplete-item-name">' + this.escapeHtml(opt.name) + '</span>';
@@ -2393,8 +2414,8 @@
             return 'phone';
         }
 
-        // Otherwise it's a name search (minimum 2 characters)
-        if (value.length >= 2) {
+        // Otherwise it's a name search (minimum chars from FSS_DEFAULTS)
+        if (value.length >= FSS_DEFAULTS.nameMinLength) {
             return 'name';
         }
 
@@ -2769,8 +2790,8 @@
             xhr.setRequestHeader('api_key', this.config.apiKey);
         }
 
-        // Phase 7: Set timeout (30 seconds)
-        xhr.timeout = 30000;
+        // Phase 7: Set timeout (uses FSS_DEFAULTS)
+        xhr.timeout = FSS_DEFAULTS.apiTimeout;
 
         xhr.onload = function() {
             if (timedOut) return;

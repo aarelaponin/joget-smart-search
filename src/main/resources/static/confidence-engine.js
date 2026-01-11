@@ -12,7 +12,7 @@
 (function(global) {
     'use strict';
 
-    var VERSION = '8.1-SNAPSHOT-phase6';
+    var VERSION = '8.1-SNAPSHOT-phase9';
     var CACHE_KEY = 'fss_statistics_cache';
     var DEFAULT_TTL_HOURS = 24;
 
@@ -23,6 +23,8 @@
      * @param {Object} config - Optional configuration
      * @param {number} config.nationalIdMinLength - Minimum length for national ID (default: 4)
      * @param {number} config.phoneMinLength - Minimum length for phone (default: 8)
+     * @param {number} config.nameMinLength - Minimum length for name search (default: 2)
+     * @param {number} config.statisticsTimeout - Timeout for statistics API call in ms (default: 10000)
      */
     function ConfidenceEngine(config) {
         this.statistics = null;
@@ -34,6 +36,8 @@
         config = config || {};
         this.nationalIdMinLength = config.nationalIdMinLength || 4;
         this.phoneMinLength = config.phoneMinLength || 8;
+        this.nameMinLength = config.nameMinLength || 2;
+        this.statisticsTimeout = config.statisticsTimeout || 10000;
     }
 
     /**
@@ -46,6 +50,12 @@
         }
         if (config.phoneMinLength !== undefined) {
             this.phoneMinLength = config.phoneMinLength;
+        }
+        if (config.nameMinLength !== undefined) {
+            this.nameMinLength = config.nameMinLength;
+        }
+        if (config.statisticsTimeout !== undefined) {
+            this.statisticsTimeout = config.statisticsTimeout;
         }
     };
 
@@ -294,7 +304,7 @@
             self._fallbackToCache(callback, 'Network error');
         };
 
-        xhr.timeout = 10000; // 10 second timeout
+        xhr.timeout = this.statisticsTimeout;
         xhr.ontimeout = function() {
             self._fallbackToCache(callback, 'Request timeout');
         };
@@ -510,8 +520,8 @@
             }
         }
 
-        // Check what criteria we have (Issue #6: uses config min lengths)
-        var hasName = !!(criteria.name && criteria.name.trim() && criteria.name.trim().length >= 2);
+        // Check what criteria we have (Issue #6, #12: uses config min lengths)
+        var hasName = !!(criteria.name && criteria.name.trim() && criteria.name.trim().length >= this.nameMinLength);
         var hasDistrict = !!(criteria.districtCode && criteria.districtCode.trim());
         var hasVillage = !!(criteria.village && criteria.village.trim());
         var hasPartialId = !!(criteria.partialId && criteria.partialId.length >= this.nationalIdMinLength);
