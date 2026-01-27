@@ -1,7 +1,7 @@
 # Smart Farmer Search Plugin - User Testing Guide
 
-**Version:** 8.1-SNAPSHOT-phase10
-**Last Updated:** 2026-01-11
+**Version:** 8.1-SNAPSHOT
+**Last Updated:** 2026-01-27
 **Document Type:** QA Testing Guide
 
 ---
@@ -219,12 +219,14 @@ SELECT DISTINCT c_district_name FROM v_farmer_search;
 
 ---
 
-#### FSS-012: Phonetic Matching (Soundex)
+#### FSS-012: Phonetic Matching (Soundex) - OPTIONAL
 
 | Field | Value |
 |-------|-------|
-| **Preconditions** | Know a farmer name |
-| **Priority** | Medium |
+| **Preconditions** | Know a farmer name, `fuzzystrmatch` extension enabled |
+| **Priority** | Low |
+
+> **Note:** This test only applies if the `fuzzystrmatch` PostgreSQL extension is enabled. Azure PostgreSQL may not support this extension. Skip if Soundex is not configured.
 
 **Steps:**
 
@@ -237,6 +239,8 @@ SELECT DISTINCT c_district_name FROM v_farmer_search;
 
 - [ ] Phonetically similar names appear in results
 - [ ] Soundex matching contributes to relevance score
+
+**If Soundex not available:** Fuzzy matching still works via Levenshtein distance (finding "Tabo" for "Thabo" with slight penalty).
 
 ---
 
@@ -909,3 +913,4 @@ Recommended test farmers:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-11 | Claude Code | Initial version |
+| 1.1 | 2026-01-27 | Claude Code | Marked Soundex test as optional (Azure PostgreSQL compatibility) |

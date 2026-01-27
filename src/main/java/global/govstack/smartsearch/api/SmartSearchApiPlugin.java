@@ -469,14 +469,16 @@ public class SmartSearchApiPlugin extends ApiPluginAbstract {
      */
     private Map<String, Object> formatFarmer(FarmerResult farmer) {
         Map<String, Object> map = new LinkedHashMap<>();
-        
+
         map.put("id", farmer.getId());
-        map.put("nationalId", farmer.getNationalIdMasked());
+        map.put("nationalId", farmer.getNationalId());              // Full value for storing
+        map.put("nationalIdMasked", farmer.getNationalIdMasked());  // Masked for display
         map.put("firstName", farmer.getFirstName());
         map.put("lastName", farmer.getLastName());
         map.put("gender", farmer.getGender());
         map.put("dateOfBirth", farmer.getDateOfBirth());
-        map.put("phone", farmer.getPhoneMasked());
+        map.put("phone", farmer.getPhone());                        // Full value for storing
+        map.put("phoneMasked", farmer.getPhoneMasked());            // Masked for display
         map.put("districtCode", farmer.getDistrictCode());
         map.put("districtName", farmer.getDistrictName());
         map.put("village", farmer.getVillage());
@@ -484,7 +486,7 @@ public class SmartSearchApiPlugin extends ApiPluginAbstract {
         map.put("cooperativeName", farmer.getCooperativeName());
         map.put("sourceRecordId", farmer.getSourceRecordId());
         map.put("relevanceScore", farmer.getRelevanceScore());
-        
+
         return map;
     }
     

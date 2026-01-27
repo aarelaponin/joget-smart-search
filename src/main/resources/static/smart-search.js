@@ -3011,7 +3011,7 @@
 
         // Right section - ID and score
         html += '  <div class="fss-farmer-meta">';
-        html += '    <span class="fss-farmer-id">ID: ' + this.escapeHtml(farmer.nationalId || '—') + '</span>';
+        html += '    <span class="fss-farmer-id">ID: ' + this.escapeHtml(farmer.nationalIdMasked || farmer.nationalId || '—') + '</span>';
         html += '    <span class="fss-farmer-score ' + scoreClass + '">' + score + '%</span>';
         html += '  </div>';
 
@@ -3179,8 +3179,9 @@
         if (!this.displayFieldText) return;
 
         var displayText = farmer.firstName + ' ' + farmer.lastName;
-        if (farmer.nationalId) {
-            displayText += ' (ID: ' + farmer.nationalId + ')';
+        var displayId = farmer.nationalIdMasked || farmer.nationalId;
+        if (displayId) {
+            displayText += ' (ID: ' + displayId + ')';
         }
 
         this.displayFieldText.innerHTML = '<span class="fss-farmer-icon">👤</span><span class="fss-farmer-name">' + this.escapeHtml(displayText) + '</span>';

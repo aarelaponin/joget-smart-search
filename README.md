@@ -6,7 +6,7 @@ Smart Farmer Search form element with progressive criteria builder, fuzzy matchi
 
 - **Single Text Box Search**: Auto-detects patterns (ID/Phone → instant result)
 - **Progressive Criteria Builder**: Build search criteria with confidence indicator
-- **Fuzzy Matching**: Levenshtein distance + Soundex for name matching
+- **Fuzzy Matching**: Levenshtein distance for name matching (Soundex optional, requires `fuzzystrmatch` extension)
 - **REST API**: Full API for search operations
 - **Application-Level Logic**: All search logic in Java, database for indexing only
 - **Configurable Input Patterns**: Customize ID/phone detection regex per deployment
@@ -53,7 +53,7 @@ joget-smart-search/
 
 1. Joget DX8/DX9 Enterprise Edition
 2. API Builder plugin installed and configured
-3. Database tables created (see `smart-search-ddl.sql`)
+3. Database view created (see Database Setup below)
 
 ### Build
 
@@ -69,9 +69,48 @@ mvn clean package
 
 ### Database Setup
 
-1. Run `smart-search-ddl.sql` to create index tables
-2. Run `populate-index.sql` to populate from source data
-3. Optionally run `test-data.sql` for test data
+Create the `v_farmer_search` view that the plugin queries. Adjust table names to match your Joget forms.
+
+**PostgreSQL (Azure compatible):**
+```sql
+CREATE OR REPLACE VIEW v_farmer_search AS
+SELECT
+    bi.id,
+    bi.c_national_id,
+    REGEXP_REPLACE(bi.c_mobile_number, '[^0-9]', '', 'g') AS c_phone_normalized,
+    bi.c_mobile_number AS c_phone_display,
+    bi.c_first_name,
+    bi.c_last_name,
+    bi.c_gender,
+    bi.c_date_of_birth,
+    loc.c_district AS c_district_code,
+    d.c_name AS c_district_name,
+    loc.c_village,
+    loc.c_communityCouncil AS c_community_council,
+    bi.c_cooperative_name,
+    LOWER(CONCAT_WS(' ', TRIM(bi.c_first_name), TRIM(bi.c_last_name))) AS c_search_name,
+    NULL AS c_name_soundex,  -- Set to NULL if fuzzystrmatch not available
+    fr.id AS c_source_record_id
+FROM app_fd_farmerBasicInfo bi
+INNER JOIN app_fd_farms_registry fr ON bi.c_parent_id = fr.id
+LEFT JOIN app_fd_farm_location loc ON loc.c_parent_id = fr.id
+LEFT JOIN app_fd_md03district d ON loc.c_district = d.c_code;
+```
+
+**Optional: Enable Soundex (requires fuzzystrmatch extension):**
+```sql
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+-- Then replace NULL AS c_name_soundex with:
+-- CONCAT_WS(' ', soundex(bi.c_first_name), soundex(bi.c_last_name)) AS c_name_soundex
+```
+
+### API Builder Setup
+
+1. Go to **Settings → API Builder** in Joget
+2. Create a new API with:
+   - **API ID**: `fss` (or any ID)
+   - **Plugin**: Select "Smart Farmer Search API"
+3. Note the API ID and Key for form element configuration
 
 ## API Endpoints
 
@@ -105,12 +144,14 @@ Main search endpoint.
   "farmers": [
     {
       "id": "TEST001",
-      "nationalId": "...6789",
+      "nationalId": "1234567890123",
+      "nationalIdMasked": "...0123",
       "firstName": "Mamosa",
       "lastName": "Motlomelo",
       "gender": "Female",
       "dateOfBirth": "1985-03-15",
-      "phone": "...4567",
+      "phone": "+26622123456",
+      "phoneMasked": "...3456",
       "districtCode": "BER",
       "districtName": "Berea",
       "village": "Ha Matala",

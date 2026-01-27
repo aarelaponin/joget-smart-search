@@ -39,6 +39,11 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Claude prompts (keep private)
 docs/*_PROMPT.md
+
+# Test screenshots
+test-screenshots/
+test-screens/
