@@ -68,7 +68,7 @@
 </div>
 
 <#-- Cache bust version - change to force reload -->
-<#assign fssCacheVersion = "20260111_phase7_v2">
+<#assign fssCacheVersion = "20260127_retry_fix">
 
 <#-- Load CSS (only once per page) -->
 <#if !request.getAttribute("fss_css_loaded")??>
@@ -177,11 +177,19 @@
     /**
      * Initialize the search component
      */
+    var initRetryCount = 0;
+    var MAX_INIT_RETRIES = 50; // Max 5 seconds (50 * 100ms)
+
     function initSearch() {
-        log('initSearch called');
+        log('initSearch called (attempt ' + (initRetryCount + 1) + ')');
 
         var container = document.getElementById(instanceId);
         if (!container) {
+            initRetryCount++;
+            if (initRetryCount >= MAX_INIT_RETRIES) {
+                console.error('[FSS ' + instanceId + '] Container not found after ' + MAX_INIT_RETRIES + ' retries. Giving up.');
+                return;
+            }
             log('Container not found, retrying in 100ms...');
             setTimeout(initSearch, 100);
             return;
@@ -189,6 +197,11 @@
         log('Container found:', container);
 
         if (typeof FarmerSmartSearch === 'undefined') {
+            initRetryCount++;
+            if (initRetryCount >= MAX_INIT_RETRIES) {
+                console.error('[FSS ' + instanceId + '] FarmerSmartSearch not loaded after ' + MAX_INIT_RETRIES + ' retries. Giving up.');
+                return;
+            }
             log('FarmerSmartSearch not yet available, retrying in 100ms...');
             setTimeout(initSearch, 100);
             return;

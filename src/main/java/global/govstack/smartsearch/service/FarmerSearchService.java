@@ -449,14 +449,21 @@ public class FarmerSearchService {
                 params.add(criteria.getCooperative().trim());
             }
             
-            // Name search (fuzzy via LIKE and soundex)
+            // Name search (fuzzy via LIKE, trigram similarity, and soundex)
             if (isNotEmpty(criteria.getName())) {
                 String searchName = fuzzyService.normalizeName(criteria.getName());
                 String searchSoundex = generateSearchSoundex(criteria.getName());
-                
-                sql.append(" AND (c_search_name LIKE ? OR c_name_soundex LIKE ?)");
+
+                // Use pg_trgm similarity() for fuzzy matching (finds "Tabo" when searching "Thabo")
+                // Compare against first_name and last_name separately for better matching
+                // Threshold 0.3 = 30% similarity minimum
+                sql.append(" AND (c_search_name LIKE ? OR c_name_soundex LIKE ?");
+                sql.append(" OR similarity(LOWER(c_first_name), ?) > 0.3");
+                sql.append(" OR similarity(LOWER(c_last_name), ?) > 0.3)");
                 params.add("%" + searchName + "%");
                 params.add("%" + searchSoundex + "%");
+                params.add(searchName);
+                params.add(searchName);
             }
             
             // Limit results

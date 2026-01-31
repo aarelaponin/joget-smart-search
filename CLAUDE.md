@@ -55,7 +55,9 @@ global.govstack.smartsearch/
 
 1. Check exact match fields (nationalId, phone) → instant 100% score result
 2. Build parameterized SQL with filters (district, village, cooperative, etc.)
-3. Add fuzzy name matching via LIKE and Soundex
+3. Add fuzzy name matching via LIKE, pg_trgm `similarity()`, and Soundex
+   - pg_trgm compares against first_name and last_name separately (threshold > 0.3)
+   - Requires `pg_trgm` PostgreSQL extension
 4. Execute query against `v_farmer_search` view
 5. Score results in application layer using `FuzzyMatchService`:
    - Base: 50 points

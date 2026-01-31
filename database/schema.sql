@@ -75,6 +75,21 @@ LEFT JOIN app_fd_md03district d ON loc.c_district = d.c_code;
 */
 
 -- ============================================================================
+-- FUZZY MATCHING WITH pg_trgm (Recommended)
+-- Enables finding "Thabo" when searching "Tabo"
+-- May require Azure portal allow-listing before CREATE EXTENSION
+-- ============================================================================
+
+/*
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Create trigram index for fast fuzzy name searches
+CREATE INDEX idx_farmer_search_name_trgm
+ON app_fd_farmerBasicInfo
+USING gin((LOWER(c_first_name || ' ' || c_last_name)) gin_trgm_ops);
+*/
+
+-- ============================================================================
 -- INDEX TABLE (Alternative for MySQL or performance optimization)
 -- ============================================================================
 

@@ -6,7 +6,7 @@ Smart Farmer Search form element with progressive criteria builder, fuzzy matchi
 
 - **Single Text Box Search**: Auto-detects patterns (ID/Phone → instant result)
 - **Progressive Criteria Builder**: Build search criteria with confidence indicator
-- **Fuzzy Matching**: Levenshtein distance for name matching (Soundex optional, requires `fuzzystrmatch` extension)
+- **Fuzzy Matching**: Trigram similarity via `pg_trgm` (finds "Tabo" → "Thabo"), Levenshtein scoring, optional Soundex
 - **REST API**: Full API for search operations
 - **Application-Level Logic**: All search logic in Java, database for indexing only
 - **Configurable Input Patterns**: Customize ID/phone detection regex per deployment
@@ -102,6 +102,17 @@ LEFT JOIN app_fd_md03district d ON loc.c_district = d.c_code;
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 -- Then replace NULL AS c_name_soundex with:
 -- CONCAT_WS(' ', soundex(bi.c_first_name), soundex(bi.c_last_name)) AS c_name_soundex
+```
+
+**Recommended: Enable pg_trgm for fuzzy name matching (finds "Tabo" when searching "Thabo"):**
+```sql
+-- Enable the extension (may require Azure portal allow-listing first)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Create index for faster fuzzy searches
+CREATE INDEX idx_farmer_search_name_trgm
+ON app_fd_farmerBasicInfo
+USING gin((LOWER(c_first_name || ' ' || c_last_name)) gin_trgm_ops);
 ```
 
 ### API Builder Setup
@@ -270,7 +281,9 @@ The form element has several configuration sections:
 ## Search Algorithm
 
 1. Check for exact match fields (nationalId, phone) → instant result
-2. Build parameterized SQL query with filters
+2. Build parameterized SQL query with filters:
+   - Name matching uses: LIKE, pg_trgm `similarity()` > 0.3, and Soundex (if available)
+   - pg_trgm compares against first_name and last_name separately for better accuracy
 3. Execute query, get raw results (up to 50)
 4. Score and rank in application layer:
    - Base score: 50

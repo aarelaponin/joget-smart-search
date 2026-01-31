@@ -219,28 +219,27 @@ SELECT DISTINCT c_district_name FROM v_farmer_search;
 
 ---
 
-#### FSS-012: Phonetic Matching (Soundex) - OPTIONAL
+#### FSS-012: Fuzzy Name Matching (pg_trgm)
 
 | Field | Value |
 |-------|-------|
-| **Preconditions** | Know a farmer name, `fuzzystrmatch` extension enabled |
-| **Priority** | Low |
-
-> **Note:** This test only applies if the `fuzzystrmatch` PostgreSQL extension is enabled. Azure PostgreSQL may not support this extension. Skip if Soundex is not configured.
+| **Preconditions** | Know a farmer name, `pg_trgm` extension enabled |
+| **Priority** | Medium |
 
 **Steps:**
 
 1. [ ] Open the search dialog
-2. [ ] Enter a phonetically similar name (e.g., "Smith" vs "Smyth")
+2. [ ] Enter a slightly different name (e.g., "Tabo" instead of "Thabo")
 3. [ ] Select appropriate district
 4. [ ] Click "Search"
 
 **Expected Results:**
 
-- [ ] Phonetically similar names appear in results
-- [ ] Soundex matching contributes to relevance score
+- [ ] Farmer with similar name appears in results (e.g., "Thabo" found when searching "Tabo")
+- [ ] Score reflects partial match (typically 50-85%)
 
-**If Soundex not available:** Fuzzy matching still works via Levenshtein distance (finding "Tabo" for "Thabo" with slight penalty).
+> **Note:** Requires `pg_trgm` PostgreSQL extension. If not available, fuzzy matching falls back to LIKE and Levenshtein distance.
+> Soundex matching is an additional optional layer requiring the `fuzzystrmatch` extension.
 
 ---
 
